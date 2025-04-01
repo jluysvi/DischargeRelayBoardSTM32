@@ -27,6 +27,7 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
+//test
 typedef struct
 {
 	GPIO_TypeDef *port;
