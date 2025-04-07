@@ -52,13 +52,16 @@ DMA_HandleTypeDef hdma_adc1;
 
 UART_HandleTypeDef huart1;
 DMA_HandleTypeDef hdma_usart1_rx;
-DMA_HandleTypeDef hdma_usart1_tx;
 
 /* USER CODE BEGIN PV */
 
 //This is used to send responses to and recieve commands from the master.
-uint8_t sendBuffer[4] = "repl";
+uint8_t sendBuffer[4];
 uint8_t receiveBuffer[16];
+
+//The slave will only respond to its address.
+//Starts from 2, master is 1
+uint8_t slaveId = 2;
 
 //Flags for sequence.
 //Is any single votlage line below the threshold?
@@ -66,6 +69,7 @@ uint8_t lowVoltage = 0;
 //Are all of the cell lines below the threshold?
 uint8_t dischargeDone = 0;
 //Flag set from master, should the slave discharge using relays now?
+//Not used in the voltage only board.
 uint8_t relayDischarge = 0;
 
 uint8_t conversionComplete = 0;
@@ -73,7 +77,7 @@ uint8_t receiveComplete = 0;
 
 //Temporary holding values for the voltages.
 uint16_t adcValues[12];
-uint16_t muxValues[8];
+//uint16_t muxValues[8];
 
 //Main array that holds the voltages.
 uint16_t dischargeLines[20];
@@ -116,6 +120,7 @@ static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 uint16_t readMuxChannel(uint8_t ch);
+void checkVoltages();
 
 /* USER CODE END PFP */
 
@@ -174,28 +179,29 @@ int main(void)
 
 		if(conversionComplete){
 			conversionComplete = 0;
+			//Read the voltages from the mux and pass them into the main discharge array.
 			for (int i = 0; i <= 7; i++)
-				dischargeLines[i] = readMuxChannel(i);
+				dischargeLines[i] = readMuxChannel(muxOrder[i]);
+			//Take the votlages from the adc dma and put them into the main discharge array.
 			for (int i = 8; i <= 19; i++)
 				dischargeLines[i] = adcValues[i - 8];
+			checkVoltages();
 		}
 		if(receiveComplete){
 			receiveComplete = 0;
-			HAL_GPIO_WritePin(rs485En.port, rs485En.pin, GPIO_PIN_SET);
-			switch(receiveBuffer[1]){
-			case 'A':
-				sendBuffer[0] = 'A';
-				break;
-			case 'B':
-				sendBuffer[0] = 'B';
-				break;
-			case 'C':
-				sendBuffer[0] = 'C';
-				break;
-
+			if(receiveBuffer[0] == slaveId){
+				HAL_GPIO_WritePin(rs485En.port, rs485En.pin, GPIO_PIN_SET);
+				//Master address is 1
+				//Voltage Status is next
+				//Discharge Done Status is next
+				//One
+				sendBuffer[0] = 1;
+				sendBuffer[1] = lowVoltage;
+				sendBuffer[2] = dischargeDone;
+				sendBuffer[3] = 0;
+				HAL_UART_Transmit(&huart1, sendBuffer, 4, 50);
+				HAL_GPIO_WritePin(rs485En.port, rs485En.pin, GPIO_PIN_RESET);
 			}
-			HAL_UART_Transmit(&huart1, sendBuffer, 4, 10);
-			HAL_GPIO_WritePin(rs485En.port, rs485En.pin, GPIO_PIN_RESET);
 		}
 
 
@@ -489,9 +495,6 @@ static void MX_DMA_Init(void)
   /* DMA1_Channel1_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel1_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel1_IRQn);
-  /* DMA1_Channel4_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
   /* DMA1_Channel5_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
@@ -574,19 +577,38 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 uint16_t readMuxChannel(uint8_t ch) {
-	int ord = muxOrder[ch];
 	HAL_GPIO_WritePin(muxPins[0].port, muxPins[0].pin,
-			(ord & 1) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+			(ch & 1) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(muxPins[1].port, muxPins[1].pin,
-			(ord & 2) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+			(ch & 2) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(muxPins[2].port, muxPins[2].pin,
-			(ord & 4) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+			(ch & 4) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 	HAL_ADC_Start(&hadc2);
 	HAL_ADC_PollForConversion(&hadc2, HAL_MAX_DELAY);
 	return HAL_ADC_GetValue(&hadc2);
 }
 
-void controlDischarge(uint16_t lines[]) {
+void checkVoltages(){
+	//Check if a single lines is under the threshold.
+	lowVoltage = 0;
+	for (int i = 0; i <= 19; i++){
+		if(dischargeLines[i] > voltageLowLevel){
+			lowVoltage = 1;
+			break;
+		}
+	}
+	//Check if all the lines are under the threshold.
+	dischargeDone = 1;
+	for (int i = 0; i <= 19; i++) {
+		if(dischargeLines[i] < voltageLowLevel){
+			dischargeDone = 0;
+			break;
+		}
+	}
+}
+
+//Not used at the moment.
+/*void controlDischarge(uint16_t lines[]) {
 	for (int i = 0; i <= 19; i++) {
 		if(lines[i] < voltageLowLevel){
 			HAL_GPIO_WritePin(RelayPins[i].port, RelayPins[i].pin, GPIO_PIN_SET);
@@ -595,7 +617,7 @@ void controlDischarge(uint16_t lines[]) {
 			HAL_GPIO_WritePin(RelayPins[i].port, RelayPins[i].pin, GPIO_PIN_RESET);
 		}
 	}
-}
+}*/
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
 	if (hadc->Instance == ADC1) {
