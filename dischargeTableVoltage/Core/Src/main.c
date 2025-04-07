@@ -198,7 +198,7 @@ int main(void)
 				sendBuffer[0] = 1;
 				sendBuffer[1] = lowVoltage;
 				sendBuffer[2] = dischargeDone;
-				sendBuffer[3] = 0;
+				sendBuffer[3] = 0xFF;
 				HAL_UART_Transmit(&huart1, sendBuffer, 4, 50);
 				HAL_GPIO_WritePin(rs485En.port, rs485En.pin, GPIO_PIN_RESET);
 			}
