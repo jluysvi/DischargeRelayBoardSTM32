@@ -8,7 +8,7 @@
 #ifndef INC_DISCHARGE_H_
 #define INC_DISCHARGE_H_
 
-#include "stdint.h"
+#include <stdint.h>
 #include "main.h"
 
 typedef struct {
@@ -17,9 +17,10 @@ typedef struct {
 
 } GPIOPin;
 
-void checkVoltages(uint32_t lines[20]);
+uint8_t checkVoltages(uint32_t lines[20]);
 uint32_t readMuxChannel(uint8_t ch, ADC_HandleTypeDef *adc);
 void controlDischarge(uint32_t lines[20]);
 void initOutputs(void);
+void relaysOn();
 
 #endif /* INC_DISCHARGE_H_ */

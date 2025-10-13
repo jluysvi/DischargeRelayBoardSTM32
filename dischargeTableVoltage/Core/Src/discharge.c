@@ -31,8 +31,9 @@ GPIO_PIN_11 }, { GPIOB, GPIO_PIN_10 }, { GPIOB, GPIO_PIN_2 }, };
 const GPIOPin AuxRelays[] = { { GPIOC, GPIO_PIN_5 }, { GPIOC, GPIO_PIN_4 } };
 
 //Pins are A,B,C pins which represent 1, 2 and 4 bit values of the mux.
-const GPIOPin muxPins[] = { { GPIOB, GPIO_PIN_4 }, { GPIOB, GPIO_PIN_3 }, {GPIOD,
-GPIO_PIN_2 }, };
+const GPIOPin muxPins[] = { { GPIOB, GPIO_PIN_4 }, { GPIOB, GPIO_PIN_3 }, {
+		GPIOD,
+		GPIO_PIN_2 }, };
 
 uint8_t lowVoltage;
 uint8_t dischargeDone;
@@ -51,7 +52,7 @@ uint32_t readMuxChannel(uint8_t ch, ADC_HandleTypeDef *adc) {
 	return HAL_ADC_GetValue(adc);
 }
 
-void checkVoltages(uint32_t lines[20]) {
+uint8_t checkVoltages(uint32_t lines[20]) {
 	// Set default values
 	lowVoltage = 0;
 	dischargeDone = 1;
@@ -71,6 +72,15 @@ void checkVoltages(uint32_t lines[20]) {
 			break;
 		}
 	}
+	if(lowVoltage)
+	{
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+
 }
 
 void controlDischarge(uint32_t lines[20]) {
@@ -93,12 +103,19 @@ void controlDischarge(uint32_t lines[20]) {
 void initOutputs(void) {
 	//All relays on
 	for (int i = 0; i <= 19; i++) {
-		HAL_GPIO_WritePin(RelayPins[i].port, RelayPins[i].pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(RelayPins[i].port, RelayPins[i].pin, GPIO_PIN_RESET);
 
 	}
 	//Inverter on
 	HAL_GPIO_WritePin(AuxRelays[0].port, AuxRelays[0].pin, GPIO_PIN_SET);
 	//Discharge done off
 	HAL_GPIO_WritePin(AuxRelays[1].port, AuxRelays[1].pin, GPIO_PIN_RESET);
+}
+
+void relaysOn() {
+	for (int i = 0; i <= 19; i++) {
+		HAL_GPIO_WritePin(RelayPins[i].port, RelayPins[i].pin, GPIO_PIN_SET);
+
+	}
 }
 

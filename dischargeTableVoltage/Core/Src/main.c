@@ -20,11 +20,13 @@
 #include "main.h"
 #include "adc.h"
 #include "dma.h"
+#include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "discharge.h"
+#include "comms.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,11 +49,11 @@
 /* USER CODE BEGIN PV */
 
 uint32_t dischargeLines[20];
-uint16_t adcValues[12];
+uint32_t adcValues[12];
 
 uint8_t conversionComplete = 0;
-uint8_t lv = 1;
-uint8_t dd = 0;
+uint32_t lastTime = 0;
+
 
 
 /* USER CODE END PV */
@@ -98,9 +100,15 @@ int main(void)
   MX_DMA_Init();
   MX_ADC1_Init();
   MX_ADC2_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_ADC_Start_DMA(&hadc1, adcValues, 12);
   initOutputs();
+  initComms();
+  lastTime = HAL_GetTick();
+
+  uint8_t switchedToRelays = 0;
+  uint8_t lowVoltage = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -115,8 +123,28 @@ int main(void)
 			//Take the votlages from the adc dma and put them into the main discharge array.
 			for (int i = 8; i <= 19; i++)
 				dischargeLines[i] = adcValues[i - 8];
-			checkVoltages(dischargeLines);
+			lowVoltage = checkVoltages(dischargeLines);
 			controlDischarge(dischargeLines);
+		}
+		//Transmit every 5 seconds if voltage is low.
+		if(HAL_GetTick() - lastTime > 5000)
+		{
+			lastTime = HAL_GetTick();
+			if(lowVoltage)
+			{
+				commsTransmit();
+				if(switchedToRelays == 0)
+				{
+					relaysOn();
+					switchedToRelays = 1;
+				}
+			}
+		}
+		//If I got a signal from another board and have not switched on the relays yet.
+		if(gotSignal() == 1 && switchedToRelays == 0)
+		{
+			relaysOn();
+			switchedToRelays = 1;
 		}
 
     /* USER CODE END WHILE */
