@@ -45,8 +45,8 @@ static void commsProcess() {
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 	if (huart->Instance == USART1) {
-		HAL_UART_Receive_DMA(&huart1, rx_buf, BUF_SIZE);
 		commsProcess();
+		HAL_UART_Receive_DMA(&huart1, rx_buf, BUF_SIZE);
 	}
 }
 
