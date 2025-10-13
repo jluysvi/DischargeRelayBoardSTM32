@@ -15,7 +15,8 @@ const uint16_t inverterCutoff = 2000;
 //110 reading is about 2v
 const uint16_t dischargeDoneLevel = 110;
 
-const uint16_t relayVoltageLevel = inverterCutoff;
+
+const uint16_t relayVoltageLevel = 3000;
 
 //These are the pins the correspond to the discharge relays.
 //TODO: Create and order array for this as well.
