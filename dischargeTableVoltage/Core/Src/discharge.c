@@ -56,6 +56,7 @@ uint32_t readMuxChannel(uint8_t ch, ADC_HandleTypeDef *adc) {
 
 uint8_t checkVoltages(uint32_t lines[20]) {
 	// Set default values
+	static lowVoltageFlag = 0;
 	lowVoltage = 0;
 	dischargeDone = 1;
 
@@ -63,6 +64,7 @@ uint8_t checkVoltages(uint32_t lines[20]) {
 	for (int i = 0; i <= 19; i++) {
 		if (lines[i] > inverterCutoff) {
 			lowVoltage = 1;
+			lowVoltageFlag = 1;
 			break;
 		}
 	}
@@ -74,7 +76,7 @@ uint8_t checkVoltages(uint32_t lines[20]) {
 			break;
 		}
 	}
-	if(lowVoltage)
+	if(lowVoltageFlag)
 	{
 		return 1;
 	}
