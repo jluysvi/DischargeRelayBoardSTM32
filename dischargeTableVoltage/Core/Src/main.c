@@ -133,12 +133,13 @@ int main(void)
 			if(lowVoltage)
 			{
 				commsTransmit();
-				if(switchedToRelays == 0)
-				{
-					relaysOn();
-					switchedToRelays = 1;
-				}
 			}
+		}
+		//If the voltage is low, switch to relays.
+		if(lowVoltage == 1 && switchedToRelays == 0)
+		{
+			relaysOn();
+			switchedToRelays = 1;
 		}
 		//If I got a signal from another board and have not switched on the relays yet.
 		if(gotSignal() == 1 && switchedToRelays == 0)
