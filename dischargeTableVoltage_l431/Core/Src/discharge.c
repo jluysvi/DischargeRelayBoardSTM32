@@ -49,9 +49,13 @@ uint32_t readMuxChannel(uint8_t ch, ADC_HandleTypeDef *adc) {
 			(muxOrder[ch] & 2) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(muxPins[2].port, muxPins[2].pin,
 			(muxOrder[ch] & 4) ? GPIO_PIN_SET : GPIO_PIN_RESET);
-	HAL_ADC_Start(adc);
-	HAL_ADC_PollForConversion(adc, HAL_MAX_DELAY);
-	return HAL_ADC_GetValue(adc);
+	//The STM32L431 has a single ADC, so the mux output (PB1 / ADC1_IN16) is read
+	//through the ADC1 injected group. A software-triggered injected conversion can
+	//be inserted while the regular 12-channel DMA scan keeps running, which is what
+	//the second ADC used to do on the STM32F103.
+	HAL_ADCEx_InjectedStart(adc);
+	HAL_ADCEx_InjectedPollForConversion(adc, HAL_MAX_DELAY);
+	return HAL_ADCEx_InjectedGetValue(adc, ADC_INJECTED_RANK_1);
 }
 
 uint8_t checkVoltages(uint32_t lines[20]) {
