@@ -130,23 +130,24 @@ void controlDischarge(uint32_t lines[20]) {
 
 	if (lowVoltage) {
 		HAL_GPIO_WritePin(AuxRelays[0].port, AuxRelays[0].pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(AuxRelays[1].port, AuxRelays[1].pin, GPIO_PIN_RESET);
 	}
 	if (dischargeDone) {
-		HAL_GPIO_WritePin(AuxRelays[1].port, AuxRelays[1].pin, GPIO_PIN_SET);
+
 	}
 
 }
 
 void initOutputs(void) {
-	//All relays on
+	//All relays off
 	for (int i = 0; i <= 19; i++) {
 		HAL_GPIO_WritePin(RelayPins[i].port, RelayPins[i].pin, GPIO_PIN_RESET);
 
 	}
-	//Inverter on
+	//Inverter1 on
 	HAL_GPIO_WritePin(AuxRelays[0].port, AuxRelays[0].pin, GPIO_PIN_SET);
-	//Discharge done off
-	HAL_GPIO_WritePin(AuxRelays[1].port, AuxRelays[1].pin, GPIO_PIN_RESET);
+	//Inverter2 ON
+	HAL_GPIO_WritePin(AuxRelays[1].port, AuxRelays[1].pin, GPIO_PIN_SET);
 }
 
 void relaysOn() {
